@@ -25,9 +25,6 @@ static int ubuntum(void *a) {
 	chroot("/data/ubuntu");
 	chdir("/");
 
-	/* Mount /proc as an example */
-	mount("proc", "/proc", "proc", 0, "");
-
 	/* Set basic env variables */
 	setenv("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", 1);
 	setenv("SHELL", "/bin/bash", 1);

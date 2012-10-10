@@ -26,14 +26,19 @@ static int ubuntum(void *a) {
 	chdir("/");
 
 	/* Set basic env variables */
-	setenv("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", 1);
-	setenv("SHELL", "/bin/bash", 1);
-	setenv("HOME", "/root", 1);
+	char *const envp[7] = {
+        	"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", 
+		"SHELL=/bin/bash", 
+		"HOME=/root",
+		"USER=root",
+		"USERNAME=root",
+      		"LOGNAME=root", 
+		NULL
+	};
 
 	/* Exec shell */
 	printf("Calling UBUNTU init...\n");
-	execl("/sbin/init", "/sbin/init", "--verbose", NULL);
-//	execl("/bin/bash", "/bin/bash", NULL);
+	execle("/sbin/init", "/sbin/init", "--verbose", NULL, envp);
 
 	return 0;
 }
@@ -44,12 +49,10 @@ int main() {
 	long stack_size = sysconf(_SC_PAGESIZE);
 	void *stack = alloca(stack_size) + stack_size;
 
-	/* Mount /dev so console can work from start */
-	mount("/dev", "/data/ubuntu/dev", "", MS_BIND, "");
-
+        printf("About to call clone()\n");
 	/* New process with its own PID/IPC/NS namespace */
 	pid = clone(ubuntum, stack, SIGCHLD | CLONE_NEWPID | CLONE_NEWIPC |
-				CLONE_NEWNS | CLONE_FILES, NULL);
+				CLONE_NEWNS, NULL);
 
 	/* Wait for the child to terminate */
 	while (waitpid(pid, &ret, 0) < 0 && errno == EINTR)

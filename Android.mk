@@ -9,4 +9,4 @@ LOCAL_SRC_FILES:= uchroot.c
 LOCAL_STATIC_LIBRARIES := libc
 
 include $(BUILD_EXECUTABLE)
-include $(BUILD_PREBUILT)
+

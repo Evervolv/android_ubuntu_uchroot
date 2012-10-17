@@ -41,7 +41,8 @@ static int ubuntum(void *a) {
     chdir("/");
 
     /* Set basic env variables */
-    char *const envp[7] = {
+    char *const envp[8] = {
+        "container=aal",
         "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", 
         "SHELL=/bin/bash", 
         "HOME=/root",

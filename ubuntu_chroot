@@ -1,0 +1,103 @@
+#!/system/bin/sh
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the the GNU General Public License version 3, as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranties of
+# MERCHANTABILITY, SATISFACTORY QUALITY or FITNESS FOR A PARTICULAR
+# PURPOSE.  See the applicable version of the GNU Lesser General Public
+# License for more details.
+#.
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright (C) 2012 Canonical, Ltd.
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export HOME=/root
+export USER=root
+
+ROOT=/data/ubuntu
+MOUNT=/system/bin/mount
+CHROOT=/system/xbin/chroot
+ECHO=/system/xbin/echo
+MKDIR=/system/bin/mkdir
+UCHROOT=/system/bin/uchroot
+
+enable_swap()
+{
+    if [ -f /data/ubuntu/SWAP.swap ]
+    then
+        /system/xbin/swapon /data/ubuntu/SWAP.swap
+    fi
+}
+
+export_qt5_shell_envvars()
+{
+    # These are here to be able to launch the Qt5 apps seamlessly
+    export QML2_IMPORT_PATH=/usr/lib/arm-linux-gnueabihf/qt5/imports
+    export QT_QPA_PLATFORM=ubuntu
+}
+
+setup_mounts()
+{
+    if [ ! -d $ROOT/vendor ]
+    then
+        $MKDIR $ROOT/vendor
+    fi
+    if [ ! -d $ROOT/system ]
+    then
+        $MKDIR $ROOT/system
+    fi
+    if [ ! -d $ROOT/data ]
+    then
+        $MKDIR $ROOT/data
+    fi
+
+    $MOUNT -o bind /dev $ROOT/dev
+
+    $MOUNT -t devpts devpts $ROOT/dev/pts
+    $MOUNT -t sysfs sysfs $ROOT/sys
+    $MOUNT -t tmpfs run $ROOT/run
+
+    if [ ! -d $ROOT/run/shm ]
+    then
+        $MKDIR $ROOT/run/shm
+    fi
+
+    $MOUNT -t tmpfs none $ROOT/run/shm
+
+    if [ ! -d $ROOT/run/lock ]
+    then
+        $MKDIR $ROOT/run/lock
+    fi
+
+    $MOUNT -t tmpfs -o size=5242880 none $ROOT/run/lock
+    $MOUNT -o bind /system $ROOT/system
+    $MOUNT -o bind /vendor $ROOT/vendor
+    $MOUNT -o bind /data $ROOT/data
+}
+
+launch_uchroot()
+{
+    exec $UCHROOT
+}
+
+launch_shell()
+{
+    export_qt5_shell_envvars
+    exec $CHROOT $ROOT /bin/bash -c su -
+}
+
+if [ "$1" == "shell" ]
+then
+    launch_shell
+elif [ -n "$1" ]
+then
+    echo "[shell] is the only supported argument"
+else
+    setup_mounts
+    enable_swap
+    launch_uchroot
+fi

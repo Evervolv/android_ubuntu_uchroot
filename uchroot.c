@@ -20,11 +20,15 @@
 #include <sys/types.h>
 #include <sys/mount.h>
 #include <alloca.h>
+#include <cutils/android_reboot.h>
 #include <linux/sched.h>
 #include <sched.h>
 #include <sys/wait.h>
 #include <errno.h>
 #include <stdio.h>
+
+#include <sys/stat.h>
+#include <fcntl.h>
 
 /* Locally define the new clone flags, to avoid changing bionic for now */
 #define CLONE_NEWUTS         0x04000000
@@ -53,7 +57,6 @@ static int ubuntum(void *a) {
     };
 
     /* Exec shell */
-    printf("Calling UBUNTU init...\n");
     execle("/sbin/init", "/sbin/init", "--verbose", NULL, envp);
 
     return 0;
@@ -61,23 +64,30 @@ static int ubuntum(void *a) {
 
 int main() {
     pid_t pid;
-    int ret;
+    int ret = 0;
     long stack_size = sysconf(_SC_PAGESIZE);
     void *stack = alloca(stack_size) + stack_size;
 
-    printf("About to call clone()\n");
     /* New process with its own PID/IPC/NS namespace */
-    pid = clone(ubuntum, stack, SIGCHLD | CLONE_NEWPID | CLONE_NEWIPC |
-        CLONE_NEWNS, NULL);
+    if ((pid = clone(ubuntum, stack, SIGCHLD | CLONE_NEWPID | CLONE_NEWIPC |
+		     CLONE_NEWNS, NULL)) < 0) {
+	perror("clone");
+	return EXIT_FAILURE;
+    }
 
     /* Wait for the child to terminate */
     while (waitpid(pid, &ret, 0) < 0 && errno == EINTR)
         continue;
 
-    if (WIFEXITED(ret))
-        return WEXITSTATUS(ret);
-    else {
-        perror("ERROR");
+    /* Since flags are zero, the android_reboot command
+     * will attempt to re-mount the filesystems as ro, before
+     * the final shutdown.
+     */
+    ret = android_reboot(ANDROID_RB_POWEROFF, 0, 0);
+    if (ret < 0) {
+        perror("android_reboot failed...");
         return EXIT_FAILURE;
     }
+
+    return EXIT_SUCCESS;
 }

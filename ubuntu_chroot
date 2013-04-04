@@ -90,14 +90,13 @@ launch_shell()
     exec $CHROOT $ROOT /bin/bash -c su -
 }
 
-if [ "$1" == "shell" ]
-then
-    launch_shell
-elif [ -n "$1" ]
-then
-    echo "[shell] is the only supported argument"
-else
+case $1 in
+"init")
     setup_mounts
     enable_swap
     launch_uchroot
-fi
+    ;;
+*)
+    launch_shell
+    ;;
+esac
